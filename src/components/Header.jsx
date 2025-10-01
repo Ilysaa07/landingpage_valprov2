@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, User, Briefcase, Phone, Menu, X } from 'lucide-react';
+import { Home, User, Briefcase, Phone, Menu, X, ChevronDown } from 'lucide-react';
 import logonav from '../assets/logonav.png';
 import whatsappIcon from '../assets/whatsapp-icon.svg';
 
@@ -9,6 +9,8 @@ const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const [isCsOpen, setIsCsOpen] = useState(false);
+  const [menuAnimReady, setMenuAnimReady] = useState(false);
 
   // Check if we're on a service detail page or data page
   const isServicePage = location.pathname.startsWith('/layanan/');
@@ -44,6 +46,26 @@ const Header = () => {
     }
   }, [location]);
 
+  // Lock body scroll and bind ESC to close when mobile menu is open
+  useEffect(() => {
+    if (isMenuOpen) {
+      const previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      const onKeyDown = (e) => {
+        if (e.key === 'Escape') setIsMenuOpen(false);
+      };
+      window.addEventListener('keydown', onKeyDown);
+      // prepare staged animations next frame
+      const rafId = requestAnimationFrame(() => setMenuAnimReady(true));
+      return () => {
+        document.body.style.overflow = previousOverflow;
+        window.removeEventListener('keydown', onKeyDown);
+        cancelAnimationFrame(rafId);
+        setMenuAnimReady(false);
+      };
+    }
+  }, [isMenuOpen]);
+
   // Handle navigation click
   const handleNavClick = (href) => {
     if (isServicePage || isDataPage) {
@@ -71,10 +93,11 @@ const Header = () => {
     { label: 'Kontak', href: '#kontak', icon: Phone }
   ];
 
-  const handleWhatsAppClick = () => {
-    const phoneNumber = '6289518530306'; // Nomor WhatsApp Valpro Intertech
+  const openWhatsapp = (rawNumber) => {
+    const phoneNumber = rawNumber.replace(/[^0-9]/g, '');
+    const withCountry = phoneNumber.startsWith('62') ? phoneNumber : (phoneNumber.startsWith('0') ? `62${phoneNumber.slice(1)}` : `62${phoneNumber}`);
     const message = 'Halo, saya tertarik dengan layanan Valpro. Bisa bantu saya? (Pesan Otomatis Dari Website valprointertech.com)';
-    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+    const whatsappUrl = `https://wa.me/${withCountry}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
 
@@ -138,30 +161,31 @@ const Header = () => {
                 </span>
               </button>
             ))}
-            <button
-              onClick={handleWhatsAppClick}
-              className="ml-2 inline-flex items-center h-10 rounded-full px-3 bg-[#25D366] hover:bg-[#20BA5A] text-white transition-all duration-300 shadow-lg group relative overflow-hidden"
-              aria-label="WhatsApp"
-            >
-              {/* Animated background pulse */}
-              <div className="absolute inset-0 bg-[#25D366] rounded-full animate-pulse opacity-30"></div>
-              
-              {/* Glow effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-[#25D366] to-[#20BA5A] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              
-              {/* Content */}
-              <div className="relative z-10 flex items-center">
-                <img src={whatsappIcon} alt="WhatsApp" className="w-5 h-5 animate-bounce" style={{ animationDuration: '2s' }} />
-                <span className="ml-2 max-w-0 opacity-0 overflow-hidden whitespace-nowrap transition-all duration-300 group-hover:max-w-[100px] group-hover:opacity-100 font-medium">
-                  WhatsApp
-                </span>
-              </div>
-              
-              {/* Notification dot */}
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping">
-                <div className="absolute inset-0 bg-red-500 rounded-full animate-pulse"></div>
-              </div>
-            </button>
+            <div className="relative ml-2">
+              <button
+                onClick={() => setIsCsOpen(!isCsOpen)}
+                className="inline-flex items-center h-10 rounded-full px-3 bg-[#25D366] hover:bg-[#20BA5A] text-white transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                aria-label="Customer Service"
+              >
+                <img src={whatsappIcon} alt="WhatsApp" className="w-5 h-5" />
+                <span className="ml-2 font-medium">Customer Service</span>
+                <ChevronDown className={`w-4 h-4 ml-2 transition-transform duration-200 ${isCsOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {isCsOpen && (
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg ring-1 ring-black/5 overflow-hidden z-50 transform transition duration-200 ease-out">
+                  <div className="py-1">
+                    <button onClick={() => openWhatsapp('081399710085')} className="w-full px-4 py-3 text-left hover:bg-gray-50 flex flex-col transition-all duration-200 hover:translate-x-1">
+                      <span className="font-semibold text-gray-900">Angga Puziana</span>
+                      <span className="text-sm text-gray-600">081399710085</span>
+                    </button>
+                    <button onClick={() => openWhatsapp('089518530306')} className="w-full px-4 py-3 text-left hover:bg-gray-50 flex flex-col border-t border-gray-100 transition-all duration-200 hover:translate-x-1">
+                      <span className="font-semibold text-gray-900">Ilyasa Meydiansyah</span>
+                      <span className="text-sm text-gray-600">089518530306</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </nav>
 
           {/* Mobile menu button */}
@@ -184,44 +208,79 @@ const Header = () => {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="lg:hidden">
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t">
-              {navItems.map(({ label, href, icon }) => (
-                <button
-                  key={href}
-                  onClick={() => handleNavClick(href)}
-                  className="flex items-center gap-3 px-3 py-2 text-gray-800 hover:text-[#253994] font-semibold transition-all duration-300 hover:bg-gradient-to-r hover:from-[#253994]/5 hover:to-amber-500/5 hover:translate-x-2 transform rounded w-full text-left"
-                >
-                  {React.createElement(icon, { className: 'w-5 h-5', 'aria-hidden': true })}
-                  <span>{label}</span>
-                </button>
-              ))}
+          <div className="fixed inset-0 z-[60] lg:hidden">
+            {/* Backdrop overlay */}
+            <div
+              className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 ${menuAnimReady ? 'opacity-100' : 'opacity-0'}`}
+              onClick={() => setIsMenuOpen(false)}
+            />
+            {/* Overlay gradient for depth */}
+            <div className={`pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 to-transparent transition-opacity duration-500 ${menuAnimReady ? 'opacity-100' : 'opacity-0'}`} />
 
-              {/* Mobile WhatsApp Button */}
-              <button
-                onClick={() => {
-                  handleWhatsAppClick();
-                  setIsMenuOpen(false);
-                }}
-                className="w-full bg-[#25D366] hover:bg-[#20BA5A] text-white px-3 py-3 rounded-lg font-medium transition-all duration-300 flex items-center justify-center space-x-2 mt-4 hover:scale-105 transform shadow-lg hover:shadow-xl relative overflow-hidden"
-              >
-                {/* Animated background pulse */}
-                <div className="absolute inset-0 bg-[#25D366] rounded-lg animate-pulse opacity-30"></div>
-                
-                {/* Glow effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-[#25D366] to-[#20BA5A] rounded-lg opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
-                
-                {/* Content */}
-                <div className="relative z-10 flex items-center space-x-2">
-                  <img src={whatsappIcon} alt="WhatsApp" className="w-5 h-5 animate-bounce" style={{ animationDuration: '2s' }} />
-                  <span className="font-semibold">WhatsApp</span>
+            {/* Sliding panel */}
+            <div className={`absolute top-0 left-0 right-0 rounded-b-2xl bg-white shadow-xl transform transition-all duration-300 ease-out ${menuAnimReady ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'}`}>
+              {/* Panel header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b">
+                <div className="flex items-center gap-3">
+                  <img src={logonav} alt="Valpro" className="h-7 w-auto" />
+                  <span className="font-semibold text-gray-900">Menu</span>
                 </div>
-                
-                {/* Notification dot */}
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping">
-                  <div className="absolute inset-0 bg-red-500 rounded-full animate-pulse"></div>
+                <button
+                  onClick={() => setIsMenuOpen(false)}
+                  className="p-2 rounded-full text-gray-700 hover:bg-gray-100 active:scale-95 transition"
+                  aria-label="Tutup menu"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              {/* Panel content */}
+              <div className="max-h-[75vh] overflow-y-auto">
+                <div className="px-3 py-2 space-y-1">
+                  {navItems.map(({ label, href, icon }, index) => (
+                    <button
+                      key={href}
+                      onClick={() => handleNavClick(href)}
+                      className={`flex items-center gap-3 px-3 py-3 text-gray-800 hover:text-[#253994] font-semibold transition-all duration-300 hover:bg-gray-50 active:scale-[0.99] rounded-xl w-full text-left transform ${menuAnimReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
+                      style={{ transitionDelay: `${menuAnimReady ? index * 60 : 0}ms` }}
+                    >
+                      {React.createElement(icon, { className: 'w-5 h-5', 'aria-hidden': true })}
+                      <span className="text-base">{label}</span>
+                    </button>
+                  ))}
                 </div>
-              </button>
+
+                {/* Sticky CS section */}
+                <div className="sticky bottom-0 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-t px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 space-y-2">
+                  <div className="text-xs text-gray-500 px-1">Customer Service</div>
+                  <button
+                    onClick={() => { openWhatsapp('081399710085'); setIsMenuOpen(false); }}
+                    className="w-full bg-[#25D366] hover:bg-[#20BA5A] text-white px-3 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center justify-between hover:scale-[1.01] active:scale-[0.99] shadow-sm"
+                  >
+                    <span className="flex items-center gap-2">
+                      <img src={whatsappIcon} alt="WA" className="w-5 h-5" />
+                      <span>
+                        Angga Puziana
+                        <span className="block text-xs font-normal text-white/90">Balas cepat</span>
+                      </span>
+                    </span>
+                    <span className="text-white/95 font-medium tracking-wide">081399710085</span>
+                  </button>
+                  <button
+                    onClick={() => { openWhatsapp('089518530306'); setIsMenuOpen(false); }}
+                    className="w-full bg-[#25D366] hover:bg-[#20BA5A] text-white px-3 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center justify-between hover:scale-[1.01] active:scale-[0.99] shadow-sm"
+                  >
+                    <span className="flex items-center gap-2">
+                      <img src={whatsappIcon} alt="WA" className="w-5 h-5" />
+                      <span>
+                        Ilyasa Meydiansyah
+                        <span className="block text-xs font-normal text-white/90">Admin online</span>
+                      </span>
+                    </span>
+                    <span className="text-white/95 font-medium tracking-wide">089518530306</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}

@@ -14,7 +14,6 @@ import SEO from './components/SEO';
 import ValproAssistant from './components/ValproAssistant';
 import LoadingAnimation from './components/LoadingAnimation';
 import { usePageLoading } from './hooks/usePageLoading';
-import LoadingTest from './components/LoadingTest';
 
 function App() {
   const location = useLocation();
@@ -46,7 +45,6 @@ function App() {
     <HelmetProvider>
       <div className="App">
         <LoadingAnimation isLoading={isLoading} />
-        {process.env.NODE_ENV === 'development' && <LoadingTest />}
         <Routes>
           <Route path="/" element={
             <>
